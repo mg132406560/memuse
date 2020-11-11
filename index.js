@@ -10,7 +10,7 @@ const init = (file) => {
 
     csvfile = path.resolve(file)
 
-    const header='htime,rss,heapTotal,heapUsed,external,arrayBuffers\n'
+    const header='hrtime,rss,heapTotal,heapUsed,external,arrayBuffers\n'
 
     try{
         fs.writeFileSync(csvfile, header)
