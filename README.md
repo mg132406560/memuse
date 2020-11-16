@@ -1,4 +1,7 @@
 # memuse
+![npm](https://img.shields.io/npm/v/memuse)
+![npm bundle size](https://img.shields.io/bundlephobia/min/memuse)
+
 Javascript library to record memory utilization statistics (rss,heapTotal,heapUsed,external,arrayBuffers) and generate a lines chart svg file.
 ## Usage:
 ```
