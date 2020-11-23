@@ -6,9 +6,9 @@ Javascript library to record memory utilization statistics (rss,heapTotal,heapUs
 ## Usage:
 ```
 // load the library
-const memuse=require('../memuse')
+const memuse=require('memuse')
 // or if you want to reuse accross all your code
-global.memuse=require('../../memuse')
+global.memuse=require('memuse')
 
 // create an empty file to record statistics
 memuse.init('./mem.csv')
@@ -19,3 +19,6 @@ memuse.poll()
 // generate lines chart into SVG file
 memuse.end('./mem.svg')
 ```
+Here is an example:
+
+![alt text](./out.svg)
