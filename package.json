@@ -15,6 +15,12 @@
   "bugs": {
     "url": "https://github.com/mg132406560/memuse/issues"
   },
+  "keywords": [
+    "memory",
+    "utilisation",
+    "d3",
+    "svg"
+  ],
   "homepage": "https://github.com/mg132406560/memuse#readme",
   "dependencies": {
     "csv-parse": "^4.14.0",

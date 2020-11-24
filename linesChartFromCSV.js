@@ -10,27 +10,27 @@ const { document } = (new JSDOM('')).window
 
 exports.generate = (csvfile, svgfile) => {
 
+  // set the dimensions and margins of the graph
+  var margin = {top: 50, right: 50, bottom: 100, left: 50},
+  width = 1200 - margin.left - margin.right,
+  height = 800 - margin.top - margin.bottom;
+
+  // set the ranges
+  var x = d3.scaleLinear().range([0, width]);
+  var y = d3.scaleLinear().range([height, 0]);
+
+  // append the svg obgect to the body of the page
+  // appends a 'group' element to 'svg'
+  // moves the 'group' element to the top left margin
   const body=d3.select(document).select('body')
-  
-  const width = 960
-  const height = 500
-  const margin = 5
-  const padding = 5
-  const adj = 30
-  
-  // add svg
   const svg = body.append('svg')
-    .attr('xmlns', 'http://www.w3.org/2000/svg')
-    .attr('xmlns:xlink', 'http://www.w3.org/1999/xlink')
-    .attr('preserveAspectRatio', 'xMinYMin meet')
-    .attr('viewBox', '-'
-          + adj + ' -'
-          + adj + ' '
-          + (width + adj *3) + ' '
-          + (height + adj*3))
-    .style('padding', padding)
-    .style('margin', margin)
-    .classed('svg-content', true);
+  .attr('xmlns', 'http://www.w3.org/2000/svg')
+  .attr('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+  .attr('width', width + margin.left + margin.right)
+  .attr('height', height + margin.top + margin.bottom)
+  .append('g')
+  .attr('transform',
+        'translate(' + margin.left + ',' + margin.top + ')');
   
   // load and parse data.csv file
   // timestamp, serieA, serieB, serieC, ...
@@ -43,157 +43,87 @@ exports.generate = (csvfile, svgfile) => {
     console.log(err.message)
     process.exit(1)
   }
-  parse(file,(err,data)=>{
-    
-    const header=data[0]
-    const slices = header.slice(1).map((item,index) => {
-      return {
-          id: item,
-          values: data.slice(1).map((d) => {
-              return {
-                date: +d[0],
-                measurement: +d[index+1] //'+' convert to num
-              }
-          })
-      }
+
+  let head=[]
+  parse(file,{columns: header => head=header},(err,data)=>{
+
+    if (err) throw err;
+
+    // console.log(head)
+
+    // format the data
+    data.forEach(function(d) {
+        d.hrtime = +d.hrtime
+        d.rss = +d.rss
+        d.heapTotal = +d.heapTotal
+        d.heapUsed = +d.heapUsed
+        d.external = +d.external
+        d.arrayBuffers = +d.arrayBuffers
+    });
+
+    // Scale the range of the data
+    x.domain(d3.extent(data, function(d) { 
+      return d.hrtime; 
+    }));
+    y.domain([0, d3.max(data, function(d) {
+      return Math.max(d.rss, d.heapTotal, d.heapUsed, d.external, d.arrayBuffers); 
+    })]);
+
+    // set the colour scale
+    var color = d3.scaleOrdinal(d3.schemeDark2);
+
+    legendSpace = width/head.length; // spacing for the legend
+
+    head.slice(1).forEach((h,i)=>{
+      // Add the line paths
+      svg.append('path')
+        .data([data])
+        .attr('class', 'line')
+        .style('stroke', function() { // Add the colours dynamically
+          return color(h); })
+        .style('stroke-width', '2px')
+        .style('fill', 'none')
+        .attr('d', d3.line()
+          .x(function(d) { return x(d.hrtime); })
+          .y(function(d) { return y(d[h]); }));
+
+      // Add the Legend
+      svg.append('text')
+        .attr('x', (legendSpace/2)+i*legendSpace)  // space legend
+        .attr('y', height + (margin.bottom/2)+ 5)
+        .attr('class', 'legend')    // style the legend
+        .style('fill', function() { // Add the colours dynamically
+            return color(h); })
+        .text(h);
     })
-  
-    // console.log(JSON.stringify(slices))
-  
-    // adjust scales to svc size
-    const xScale = d3.scaleLinear().range([0,width])
-    const yScale = d3.scaleLinear().rangeRound([height, 0])
-  
-    // set scales with min and max values
-    xScale.domain(d3.extent(data.slice(1),(d)=>{
-      return d[0]
-    }))
-    yScale.domain([(0), d3.max(slices, (c) => {
-      return d3.max(c.values, (d) => {
-        return d.measurement+4
-      })
-    })])
-  
-    // apply scales to axis
-    // ticks by number of values
-    const yaxis = d3.axisLeft()
-      .ticks(10)
-      .scale(yScale) 
-    // ticks by number of days
-    const xaxis = d3.axisBottom()
-      .ticks((data[0].slice(1)).length)
-      .scale(xScale)
-  
-    // add axis to svg
-    // move xaxis to bottom
-    // and rotate labels
+
+    // Add the X Axis
     svg.append('g')
-      .attr('class', 'axis')
       .attr('transform', 'translate(0,' + height + ')')
-      .call(xaxis)
-      .selectAll('text')
-      .attr('transform', 'rotate(-65)')
+      .call(d3.axisBottom(x))
+      .append('text')
+      .attr('transform', 'translate(' + width+ ', 10)')
+      .attr('dy', '.75em')
+      .attr('y', 6)
       .style('text-anchor', 'end')
-    // rotate yaxis 90deg
+      .text('Time')
+      .style('fill', '#2b2929')
+      .style('font-family', 'Georgia')
+      .style('font-size', '120%');
+
+    // Add the Y Axis
     svg.append('g')
-      .attr('class', 'axis')
-      .call(yaxis)
+      .call(d3.axisLeft(y))
       .append('text')
       .attr('transform', 'rotate(-90)')
       .attr('dy', '.75em')
       .attr('y', 6)
       .style('text-anchor', 'end')
       .text('KBytes')
-    // axis style
-    svg.selectAll('.axis text')
       .style('fill', '#2b2929')
       .style('font-family', 'Georgia')
-      .style('font-size', '120%')
-  
-    svg.selectAll('.axis line')
-      .style('stroke', '#706f6f')
-      .style('stroke-width', 0.5)
-      .style('shape-rendering', 'crispEdges')
-  
-    svg.selectAll('.axis path')
-      .style('stroke', '#706f6f')
-      .style('stroke-width', 0.7)
-      .style('shape-rendering', 'crispEdges')
-  
-    // define line function
-    const line = d3.line()
-      .x(function(d) { return xScale(d.date) })
-      .y(function(d) { return yScale(d.measurement) })
-  
-    // bind data to lines 
-    const lines = svg.selectAll('lines')
-      .data(slices)
-      .enter()
-      .append('g')
-  
-    // generate unique id for each lines set (path)
-    let id = 0;
-    const ids = function () {
-      return 'line-'+id++;
-    }    
-  
-    // add each line to its own lines set (path)
-    lines.append('path')
-      .attr('class', ids)
-      .attr('d', function(d) { 
-        return line(d.values)
-      })
-    
-    // paths styles
-    svg.select('path.line-0')
-      .style('fill', 'none')
-      .style('stroke', 'red')
-      .style('stroke-width','2')
-  
-    svg.select('path.line-1')
-      .style('fill', 'none')
-      .style('stroke', 'steelblue')
-      .style('stroke-dasharray', 2)
-      .style('stroke-width','2')
-  
-    svg.select('path.line-2')
-      .style('fill', 'none')
-      .style('stroke', 'steelblue')
-      .style('stroke-dasharray', 6)
-      .style('stroke-width','2')
-    
-    svg.select('path.line-3')
-      .style('fill', 'none')
-      .style('stroke', 'steelblue')
-  
-    svg.select('path.line-4')
-      .style('fill', 'none')
-      .style('stroke', 'steelblue')
-  
-    // add text at the end of each lines set to identify the serie
-    lines.append('text')
-      .attr('class','serie_label')
-      .datum((d) => {
-        return {
-            id: d.id,
-            value: d.values[d.values.length - 1]
-        } 
-      })
-      .attr('transform', (d) => {
-        // return 'translate(' + (xScale(timeConv(d.value.date)) + 10)  
-        //       + ',' + (yScale(d.value.measurement) + 5 ) + ')'
-        return 'translate(' + (xScale(d.value.date) + 10)  
-        + ',' + (yScale(d.value.measurement) + 5 ) + ')'
-      })
-      .attr('x', 5)
-      .text((d) => { 
-        return d.id;
-      })
-    // serie name style
-    svg.selectAll('text.serie_label')
-      .style('fill', '#2b2929')
-      .style('font-family', 'Georgia')
-      .style('font-size', '80%')
+      .style('font-size', '120%');
+
     try{
       fs.writeFileSync(svgfile, body.html())
     }catch(err){
