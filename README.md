@@ -3,6 +3,7 @@
 ![npm bundle size](https://img.shields.io/bundlephobia/min/memuse)
 
 Javascript library to record memory utilization statistics (rss,heapTotal,heapUsed,external,arrayBuffers) and generate a lines chart svg file.
+You can add a tag to the statistics whenever you need into your code so you could easily locate which piece of code is running when polling the statistics.
 ## Usage:
 ```
 // load the library
