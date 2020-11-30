@@ -6,14 +6,34 @@ const chart=require('./linesChartFromCSV')
 
 let csvfile=''
 
+const timeRef=process.hrtime.bigint()
+
+const internalPoll = (tag='') => {
+    try{
+        fs.appendFileSync(csvfile,
+            (process.hrtime.bigint()-timeRef)+','+
+            (Math.round(process.memoryUsage().rss/1024/1024*100)/100)+','+
+            (Math.round(process.memoryUsage().heapTotal/1024/1024*100)/100)+','+
+            (Math.round(process.memoryUsage().heapUsed/1024/1024*100)/100)+','+
+            (Math.round(process.memoryUsage().external/1024/1024*100)/100)+','+
+            (Math.round(process.memoryUsage().arrayBuffers/1024/1024*100)/100)+','+
+            tag
+            +'\n');
+    }catch(err){
+        console.log(err.message)
+        process.exit(1)
+    }
+}
+
 const init = (file) => {
 
     csvfile = path.resolve(file)
 
-    const header='hrtime,rss,heapTotal,heapUsed,external,arrayBuffers\n'
+    const header='hrtime,rss,heapTotal,heapUsed,external,arrayBuffers,tag\n'
 
     try{
         fs.writeFileSync(csvfile, header)
+        internalPoll()
     }catch(err){
         console.log(err.message)
         process.exit(1)
@@ -21,22 +41,12 @@ const init = (file) => {
     
 }
 
+const tag = (tag) => {
+    internalPoll(tag)
+}
+
 const poll = () => {
-    
-    try{
-        fs.appendFileSync(csvfile,
-            process.hrtime.bigint()+','+
-            (Math.round(process.memoryUsage().rss/1024/1024*100)/100)+','+
-            (Math.round(process.memoryUsage().heapTotal/1024/1024*100)/100)+','+
-            (Math.round(process.memoryUsage().heapUsed/1024/1024*100)/100)+','+
-            (Math.round(process.memoryUsage().external/1024/1024*100)/100)+','+
-            (Math.round(process.memoryUsage().arrayBuffers/1024/1024*100)/100)
-            +'\n');
-    }catch(err){
-        console.log(err.message)
-        process.exit(1)
-    }
-    
+    internalPoll()
 }
 
 const end = (file) => {
@@ -46,4 +56,4 @@ const end = (file) => {
     chart.generate(csvfile,svgfile)
 }
 
-module.exports = {init, poll, end}
+module.exports = {init, poll, tag, end}

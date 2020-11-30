@@ -48,19 +48,24 @@ exports.generate = (csvfile, svgfile) => {
   parse(file,{columns: header => head=header},(err,data)=>{
 
     if (err) throw err;
-
-    // console.log(head)
+    
+    // init tags array
+    let tags = []
 
     // format the data
     data.forEach(function(d) {
-        d.hrtime = +d.hrtime
-        d.rss = +d.rss
-        d.heapTotal = +d.heapTotal
-        d.heapUsed = +d.heapUsed
-        d.external = +d.external
-        d.arrayBuffers = +d.arrayBuffers
-        d.tag = d.tag
+      d.hrtime = +d.hrtime
+      d.rss = +d.rss
+      d.heapTotal = +d.heapTotal
+      d.heapUsed = +d.heapUsed
+      d.external = +d.external
+      d.arrayBuffers = +d.arrayBuffers
+      // if tag not empty, push to tags array
+      if(d.tag!=='')
+        tags.push(d)
     });
+    
+    // console.log(data)
 
     // Scale the range of the data
     x.domain(d3.extent(data, function(d) { 
@@ -76,7 +81,7 @@ exports.generate = (csvfile, svgfile) => {
     legendSpace = width/head.length; // spacing for the legend
 
     head.slice(1).forEach((h,i)=>{
-      // if(h!='tag'){
+      if(h!='tag'){
         // Add the line paths
         svg.append('path')
           .data([data])
@@ -88,26 +93,38 @@ exports.generate = (csvfile, svgfile) => {
           .attr('d', d3.line()
             .x(function(d) { return x(d.hrtime); })
             .y(function(d) { return y(d[h]); }));
-        
-        // Add the tag lines
-        svg.selectAll("dot")	
-          .data(data)			
-          .enter().append('line')
-          .style("stroke", "lightgreen")
-          .style("stroke-width", 10)
-          .attr("x1", function(d) { return x(d.hrtime); })
-          .attr("y1", 0)
-          .attr("x2", function(d) { return x(d.hrtime); })
-          .attr("y2", function(d) { return y(d[h]); }); 
   
         // Add the Legend
         svg.append('text')
           .attr('x', (legendSpace/2)+i*legendSpace)  // space legend
           .attr('y', height + (margin.bottom/2)+ 5)
-          .attr('class', 'legend')    // style the legend
+          // .attr('class', 'legend')    // style the legend
           .style('fill', function() { // Add the colours dynamically
               return color(h); })
           .text(h);
+      } else {
+
+        // console.log(tags)
+
+        // Add the tag lines
+        svg.selectAll('tags')	
+          .data(tags)			
+          .enter().append('line')
+          .style('stroke', 'red')
+          .style('stroke-width', 3)
+          .style('stroke-dasharray','10,10')
+          .attr('x1', function(d) { return x(d.hrtime); })
+          .attr('y1', 0)
+          .attr('x2', function(d) { return x(d.hrtime); })
+          .attr('y2', height)
+
+        svg.selectAll('tags-label')	
+          .data(tags)
+          .enter().append('text')
+          .attr('x', function(d) { return x(d.hrtime); })
+          .attr('y', 0)
+          .text(function(d) { return d.tag; });
+      }
     })
 
     // Add the X Axis
