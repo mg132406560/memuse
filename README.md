@@ -17,6 +17,9 @@ memuse.init('./mem.csv')
 // append a new line to the file with current statistics
 memuse.poll()
 
+// append a new line to the file with current statistics AND a tag message
+memuse.tag('this is a message')
+
 // generate lines chart into SVG file
 memuse.end('./mem.svg')
 ```
